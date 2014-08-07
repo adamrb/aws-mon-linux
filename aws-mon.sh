@@ -48,6 +48,9 @@ usage()
     printf "    %-28s %s\n" "--debug" "Displays information for debugging."
     printf "    %-28s %s\n" "--from-cron" "Use this option when calling the script from cron."
     printf "    %-28s %s\n" "--profile VALUE" "Use a specific profile from your credential file."
+    printf "    %-28s %s\n" "--process-count" "Reports the number of running processes."
+    printf "    %-28s %s\n" "--blocks-in" "Reports the number of blocks received from a block device."
+    printf "    %-28s %s\n" "--blocks-out" "Reports the number of blocks sent to a block device."
     printf "    %-28s %s\n" "--load-ave1" "Reports load average for 1 minute in counts."
     printf "    %-28s %s\n" "--load-ave5" "Reports load average for 5 minutes in counts."
     printf "    %-28s %s\n" "--load-ave15" "Reports load average for 15 minutes in counts."
@@ -71,9 +74,6 @@ usage()
     printf "    %-28s %s\n" "--disk-space-util" "Reports disk space utilization in percentages."
     printf "    %-28s %s\n" "--disk-space-used" "Reports allocated disk space in gigabytes."
     printf "    %-28s %s\n" "--disk-space-avail" "Reports available disk space in gigabytes."
-    printf "    %-28s %s\n" "--process-count" "Reports the number of running processes."
-    printf "    %-28s %s\n" "--blocks-in" "Reports the number of blocks received from a block device."
-    printf "    %-28s %s\n" "--blocks-out" "Reports the number of blocks sent to a block device."
     printf "    %-28s %s\n" "--all-items" "Reports all items."
 }
 
@@ -82,7 +82,7 @@ usage()
 # Options
 ########################################
 SHORT_OPTS="h"
-LONG_OPTS="help,version,verify,verbose,debug,from-cron,profile:,load-ave1,load-ave5,load-ave15,interrupt,context-switch,cpu-us,cpu-sy,cpu-id,cpu-wa,cpu-st,memory-units:,mem-used-incl-cache-buff,mem-util,mem-used,mem-avail,swap-util,swap-used,swap-avail,disk-path:,disk-space-units:,disk-space-util,disk-space-used,disk-space-avail,all-items" 
+LONG_OPTS="help,version,verify,verbose,debug,from-cron,profile:,process-count,blocks-in,blocks-out,load-ave1,load-ave5,load-ave15,interrupt,context-switch,cpu-us,cpu-sy,cpu-id,cpu-wa,cpu-st,memory-units:,mem-used-incl-cache-buff,mem-util,mem-used,mem-avail,swap-util,swap-used,swap-avail,disk-path:,disk-space-units:,disk-space-util,disk-space-used,disk-space-avail,all-items" 
 
 ARGS=$(getopt -s bash --options $SHORT_OPTS --longoptions $LONG_OPTS --name $SCRIPT_NAME -- "$@" ) 
 
@@ -337,7 +337,7 @@ if [ $FROM_CRON -eq 1 ]; then
 fi
 
 # CloudWatch Command Line Interface Option
-CLOUDWATCH_OPTS="--namespace System/Detail/Linux --dimensions InstanceId=$instanceid"
+CLOUDWATCH_OPTS="--namespace System/Detail/Linux --dimensions InstanceId=$instanceid --region=$region"
 if [ -n "$PROFILE" ]; then
     CLOUDWATCH_OPTS="$CLOUDWATCH_OPTS --profile $PROFILE"
 fi
