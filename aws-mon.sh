@@ -66,11 +66,14 @@ usage()
     printf "    %-28s %s\n" "--swap-util" "Reports swap utilization in percentages."
     printf "    %-28s %s\n" "--swap-used" "Reports allocated swap space in megabytes."
     printf "    %-28s %s\n" "--swap-avail" "Reports available swap space in megabytes."
-    printf "    %-28s %s\n" "--disk-path PATH" "Selects the disk by the path on which to report."
+    printf "    %-28s %s\n" "--disk-path PATH" "Selects the disk by the path on which to report. Defaults to '/'"
     printf "    %-28s %s\n" "--disk-space-units UNITS" "Specifies units in which to report disk space usage. If not specified, disk space is reported in gigabytes. UNITS may be one of the following: bytes, kilobytes, megabytes, gigabytes."
     printf "    %-28s %s\n" "--disk-space-util" "Reports disk space utilization in percentages."
     printf "    %-28s %s\n" "--disk-space-used" "Reports allocated disk space in gigabytes."
     printf "    %-28s %s\n" "--disk-space-avail" "Reports available disk space in gigabytes."
+    printf "    %-28s %s\n" "--process-count" "Reports the number of running processes."
+    printf "    %-28s %s\n" "--blocks-in" "Reports the number of blocks received from a block device."
+    printf "    %-28s %s\n" "--blocks-out" "Reports the number of blocks sent to a block device."
     printf "    %-28s %s\n" "--all-items" "Reports all items."
 }
 
@@ -107,12 +110,15 @@ MEM_AVAIL=0
 SWAP_UTIL=0
 SWAP_USED=0
 SWAP_AVAIL=0
-DISK_PATH=""
+DISK_PATH="/"
 DISK_SPACE_UNITS="gigabytes"
 DISK_SPACE_UNIT_DIV=1
 DISK_SPACE_UTIL=0
 DISK_SPACE_USED=0
 DISK_SPACE_AVAIL=0
+PROCESS_COUNT=0
+BLOCKS_IN=0
+BLOCKS_OUT=0
 
 eval set -- "$ARGS" 
 while true; do 
@@ -141,6 +147,17 @@ while true; do
         --profile)
             shift
             PROFILE=$1
+            ;;
+        # Process Count
+        --process-count)
+            PROCESS_COUNT=1
+            ;;
+        # IO
+        --blocks-in)
+            BLOCKS_IN=1
+            ;;
+        --blocks-out)
+            BLOCKS_OUT=1
             ;;
         # System
         --load-ave1)
@@ -238,6 +255,9 @@ while true; do
             DISK_SPACE_UTIL=1
             DISK_SPACE_USED=1
             DISK_SPACE_AVAIL=1
+            PROCESS_COUNT=1
+            BLOCKS_IN=1
+            BLOCKS_OUT=1
             ;;
         --) 
             shift
@@ -256,10 +276,10 @@ done
 # Command Output
 ########################################
 loadavg_output=`/bin/cat /proc/loadavg`
-vmstat_output=`/usr/bin/vmstat`
+vmstat_output=`/usr/bin/vmstat 1 2`
 meminfo_output=`/bin/cat /proc/meminfo`
 df_output=`/bin/df -k -l -P $DISK_PATH`
-
+ps_output=`/bin/ps axu`
 
 ########################################
 # Utility Function
@@ -332,6 +352,8 @@ if [ $DEBUG -eq 1 ]; then
     echo "$meminfo_output"
     echo "-----df-----"
     echo "$df_output"
+    echo "-----ps-----"
+    echo "$ps_output"
 fi
 
 # Load Average
@@ -384,6 +406,39 @@ if [ $INTERRUPT -eq 1 ]; then
     fi
     if [ $VERIFY -eq 0 ]; then
         aws cloudwatch put-metric-data --metric-name "Interrupt" --value "$interrupt" --unit "Count" $CLOUDWATCH_OPTS
+    fi
+fi
+
+# Blocks In
+if [ $BLOCKS_IN -eq 1 ]; then
+    blocks_in=`echo "$vmstat_output" | tail -1 | tr -s ' ' | cut -d ' ' -f 10`
+    if [ $VERBOSE -eq 1 ]; then
+        echo "blocks_in:$blocks_in"
+    fi
+    if [ $VERIFY -eq 0 ]; then
+        aws cloudwatch put-metric-data --metric-name "BlocksIn" --value "$blocks_in" --unit "Count" $CLOUDWATCH_OPTS
+    fi
+fi
+
+# Blocks Out
+if [ $BLOCKS_OUT -eq 1 ]; then
+    blocks_out=`echo "$vmstat_output" | tail -1 | tr -s ' ' | cut -d ' ' -f 11`
+    if [ $VERBOSE -eq 1 ]; then
+        echo "blocks_out:$blocks_out"
+    fi
+    if [ $VERIFY -eq 0 ]; then
+        aws cloudwatch put-metric-data --metric-name "BlocksOut" --value "$blocks_out" --unit "Count" $CLOUDWATCH_OPTS
+    fi
+fi
+
+# Process Count
+if [ $PROCESS_COUNT -eq 1 ]; then
+    process_count=`echo "$ps_output" | wc -l`
+    if [ $VERBOSE -eq 1 ]; then
+        echo "process_count:$process_count"
+    fi
+    if [ $VERIFY -eq 0 ]; then
+        aws cloudwatch put-metric-data --metric-name "Processes" --value "$process_count" --unit "Count" $CLOUDWATCH_OPTS
     fi
 fi
 
